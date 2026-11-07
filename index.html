@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alek Salvetti</title>
+<style>
+  body {
+    margin: 0;
+    background: #fdfdf8;
+    color: #111;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 17px;
+    line-height: 1.4;
+  }
+  .page { max-width: 860px; margin: 0 auto; padding: 36px 20px 48px; }
+  h1 { font-size: 30px; font-weight: normal; margin: 0 0 4px; }
+  .sub { margin: 0; }
+  hr { border: 0; border-top: 1px solid #999; margin: 20px 0; }
+  a { color: #0000ee; }
+  a:visited { color: #551a8b; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border: 1px solid #222;
+    background: #eeeee6;
+    overflow: hidden;
+    cursor: default;
+    outline: none;
+  }
+  .card img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  .card .label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; text-align: center;
+    font-family: "Courier New", Courier, monospace; font-size: 15px;
+  }
+  .card .info {
+    position: absolute; inset: 0;
+    background: rgba(253, 253, 248, 0.95);
+    padding: 14px 16px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    overflow: auto;
+  }
+  .card .info b { display: block; font-size: 18px; margin-bottom: 6px; }
+  .card .info span { font-size: 15px; }
+  .card:hover .info,
+  .card:focus .info,
+  .card.open .info { opacity: 1; }
+
+  .more { text-align: center; margin-top: 28px; }
+  .more p { margin: 4px 0; }
+  .small { font-size: 13px; color: #666; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Alek Salvetti</h1>
+  <p class="sub">Aerospace Engineering, Virginia Tech</p>
+  <p class="sub">Hardware, FPGAs, GNSS and small spacecraft.</p>
+
+  <hr>
+
+  <div class="grid" id="grid"></div>
+
+  <hr>
+
+  <div class="more">
+    <p><i>More to come...</i></p>
+    <p><a href="mailto:alessandro.salvetti@aol.com">alessandro.salvetti@aol.com</a></p>
+    <p class="small">Last updated November 2026</p>
+  </div>
+
+</div>
+
+<script>
+  // To add a photo: put it in img/ and set "img" for that project.
+  var projects = [
+    {
+      title: "Phased-array GPS receiver",
+      img: "img/gps-receiver.jpg",
+      desc: "Custom L1 RF front-end board (left) and an FPGA pipeline that acquires, tracks and decodes GPS signals on multiple antenna elements. Research with Prof. Mark Psiaki."
+    },
+    {
+      title: "InspireFly 1U CubeSat payload",
+      img: "",
+      desc: "Payload and battery electronics for a 1U CubeSat deployed from the ISS in December 2025. I assembled the flight boards and ran the battery, vibration and functionality tests."
+    },
+    {
+      title: "Lasercom prototype",
+      img: "",
+      desc: "Laser communication link for InspireFly, with a photodiode, TIA and comparator feeding an FPGA. I work on the FPGA logic and error correction."
+    },
+    {
+      title: "CubeSat patch antenna",
+      img: "",
+      desc: "Polarized PCB patch antenna designed in Ansys and optimized with MATLAB on VT ARC for gain, axial ratio and S11."
+    },
+    {
+      title: "DARPA LIFT avionics",
+      img: "",
+      desc: "CAN engine-control board, feedforward and PID throttle control, and avionics integration for a heavy-lift autonomous hexacopter."
+    },
+    {
+      title: "Aslan flight controller",
+      img: "",
+      desc: "Ported Aslan's NDAA-compliant flight controller from Betaflight to ArduCopter. Aslan tested the port and verified it works."
+    },
+    {
+      title: "Advanced soldering trainer",
+      img: "",
+      desc: "Double-sided training PCB with iron and hot-air/stencil sections, made for the AmpLab soldering training, where I have trained over 100 people."
+    }
+  ];
+
+  var grid = document.getElementById("grid");
+  projects.forEach(function (p) {
+    var card = document.createElement("div");
+    card.className = "card";
+    card.tabIndex = 0;
+    var face = p.img
+      ? '<img src="' + p.img + '" alt="' + p.title + '" loading="lazy">'
+      : '<div class="label">' + p.title + '</div>';
+    card.innerHTML = face +
+      '<div class="info"><b>' + p.title + '</b><span>' + p.desc + '</span></div>';
+    // tap to open on phones
+    card.addEventListener("click", function () { card.classList.toggle("open"); });
+    grid.appendChild(card);
+  });
+</script>
+</body>
+</html>
