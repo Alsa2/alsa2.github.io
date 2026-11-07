@@ -20,6 +20,7 @@
   a { color: #0000ee; }
   a:visited { color: #551a8b; }
 
+  /* cards */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -31,13 +32,9 @@
     border: 1px solid #222;
     background: #eeeee6;
     overflow: hidden;
-    cursor: default;
     outline: none;
   }
-  .card img {
-    width: 100%; height: 100%;
-    object-fit: cover; display: block;
-  }
+  .card > img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .card .label {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -46,17 +43,68 @@
   }
   .card .info {
     position: absolute; inset: 0;
-    background: rgba(253, 253, 248, 0.95);
+    background: rgba(253, 253, 248, 0.96);
     padding: 14px 16px;
-    opacity: 0;
+    display: flex; flex-direction: column;
+    opacity: 0; visibility: hidden;
     transition: opacity 0.15s;
-    overflow: auto;
   }
-  .card .info b { display: block; font-size: 18px; margin-bottom: 6px; }
-  .card .info span { font-size: 15px; }
-  .card:hover .info,
-  .card:focus .info,
-  .card.open .info { opacity: 1; }
+  .card .info b { font-size: 18px; margin-bottom: 6px; }
+  .card .info span { font-size: 15px; flex: 1; overflow: auto; }
+  .card:hover .info, .card:focus-within .info, .card.open .info { opacity: 1; visibility: visible; }
+
+  button.more-btn {
+    align-self: flex-start;
+    margin-top: 8px;
+    font-family: "Courier New", Courier, monospace; font-size: 13px;
+    background: none; border: 1px solid #222; padding: 2px 8px;
+    cursor: pointer; color: #111;
+  }
+  button.more-btn:hover { background: #111; color: #fdfdf8; }
+
+  /* details box */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 10;
+  }
+  .overlay.show { display: flex; }
+  .box {
+    background: #fdfdf8;
+    border: 1px solid #222;
+    width: 90vw; max-width: 1150px;
+    height: 85vh;
+    display: flex; flex-direction: column;
+  }
+  .box-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 14px 20px; border-bottom: 1px solid #999;
+  }
+  .box-head h2 { font-size: 24px; font-weight: normal; margin: 0; }
+  .close {
+    font-family: "Courier New", Courier, monospace; font-size: 14px;
+    background: none; border: 0; color: #0000ee; text-decoration: underline;
+    cursor: pointer; padding: 0;
+  }
+  .box-body { flex: 1; display: flex; min-height: 0; }
+  .photos {
+    width: 42%; overflow: auto;
+    padding: 16px 20px; border-right: 1px solid #ccc;
+  }
+  .photos figure { margin: 0 0 20px; }
+  .photos img { width: 100%; display: block; border: 1px solid #222; }
+  .photos figcaption { font-size: 14px; margin-top: 4px; }
+  .photos figcaption b { display: block; font-size: 15px; }
+  .text { flex: 1; overflow: auto; padding: 16px 24px; }
+  .text p { margin: 0 0 14px; }
+  .box.nophotos .photos { display: none; }
+
+  @media (max-width: 700px) {
+    .box { width: 96vw; height: 92vh; }
+    .box-body { flex-direction: column; overflow: auto; }
+    .photos, .text { width: auto; overflow: visible; border: 0; }
+  }
 
   .more { text-align: center; margin-top: 28px; }
   .more p { margin: 4px 0; }
@@ -68,7 +116,7 @@
 
   <h1>Alek Salvetti</h1>
   <p class="sub">Aerospace Engineering, Virginia Tech</p>
-  <p class="sub">Hardware, FPGAs, GNSS and small spacecraft.</p>
+  <p class="sub">I like taking algorithms and getting them working on real hardware.</p>
 
   <hr>
 
@@ -84,60 +132,157 @@
 
 </div>
 
+<div class="overlay" id="overlay">
+  <div class="box" id="box" role="dialog" aria-modal="true" aria-labelledby="box-title">
+    <div class="box-head">
+      <h2 id="box-title"></h2>
+      <button class="close" id="close">[close]</button>
+    </div>
+    <div class="box-body">
+      <div class="photos" id="box-photos"></div>
+      <div class="text" id="box-text"></div>
+    </div>
+  </div>
+</div>
+
 <script>
-  // To add a photo: put it in img/ and set "img" for that project.
+  // Each project: card title, short hover text, photos (first one is the card face), long text paragraphs.
   var projects = [
     {
       title: "Phased-array GPS receiver",
-      img: "img/gps-receiver.jpg",
-      desc: "Custom L1 RF front-end board (left) and an FPGA pipeline that acquires, tracks and decodes GPS signals on multiple antenna elements. Research with Prof. Mark Psiaki."
+      short: "Four-element L1 GPS receiver with a custom RF front end and an FPGA pipeline for acquisition and tracking. Research with Prof. Mark Psiaki.",
+      photos: [
+        { src: "img/gps-receiver.jpg", title: "Back of the receiver board",
+          cap: "RF board (left) plugged into the Zybo FPGA board. The bundle of traces carries the 2-bit IQ outputs of the four channels." },
+        { src: "img/old-patch-antennas.jpg", title: "First antennas, etched in the PCB",
+          cap: "They ended up large, with a 10 dB axial ratio instead of the 3 dB required." },
+        { src: "img/new-ceramic-patches.jpg", title: "Ceramic patch antennas",
+          cap: "Four ceramic patches soldered on the top side replaced the PCB patches." }
+      ],
+      long: [
+        "The goal of this project is a four-element phased-array GPS receiver, with the whole signal chain running on an FPGA. A phased array increases the signal-to-noise ratio, and by beamforming each satellite channel towards the actual satellite heading it can also remove jammers and spoofers. On the FPGA this beamforming is almost free resource wise, and it can be parallelized for each channel.",
+        "I designed the RF board around four MAX2769B chips, which contain the LNA, mixers and ADCs, and added a SAW filter between the LNA and the mixer to remove WiFi and cellular noise. The board uses a stackup with 50 Ω traces. I first tried to integrate the patch antennas directly onto the PCB, but due to the thin dielectric they ended up huge, with an axial ratio of 10 dB rather than the 3 dB required for a circularly polarized antenna, so I switched to four ceramic patches. A single 16.368 MHz clock goes through a 1-to-4 buffer to all four MAX2769B, with matched trace lengths so all the channels sample at the same time, hopefully removing the need to calibrate the array. The gains of the four chips are set over SPI, since all four elements need matching gains for the beamforming to work.",
+        "The algorithms from class could not be copied onto the FPGA, they had to be designed almost from scratch. In MATLAB, removing the Doppler was just a multiplication with a complex exponential, while on the FPGA I had to design a numerically controlled oscillator that is accelerated and decelerated by the tracking loops. Sampling at four times the intermediate frequency leaves only four possible carrier phases, so removing the carrier becomes a swap and sign change of I and Q instead of a multiplication, saving a lot of DSPs. Every variable also had to be sized: I shrank the accumulators to 25 bits to fit the DSP48E1 multiplier, and chose the bit shifts with testbenches on real data to get the best compromise between precision and overflow. Dividing by the accumulation power is done with a Newton-Raphson reciprocal followed by a multiplication.",
+        "The front end samples 2-bit IQ at 16.368 MHz, while the processing is pipelined to run at 100 MHz. Acquisition and tracking are modules that can be instantiated as needed, with each tracking loop using about 1500 of the 17600 LUTs on the Zynq-7000, so up to 11 trackers fit on this chip. The Doppler range can also be widened past the usual 10 kHz for spacecraft trajectories. We tested the receiver with a HackRF and then with a Spirent GSS9000 simulator, measuring a C/N0 of 49.4 dB-Hz.",
+        "So far acquisition, tracking and the pseudorange and ephemeris extraction work. I'm currently working on the position solution and on per-channel beamforming, so each tracker only listens to its own satellite."
+      ]
     },
     {
-      title: "InspireFly 1U CubeSat payload",
-      img: "",
-      desc: "Payload and battery electronics for a 1U CubeSat deployed from the ISS in December 2025. I assembled the flight boards and ran the battery, vibration and functionality tests."
+      title: "ContentCube (1U CubeSat)",
+      short: "InspireFly's 1U CubeSat, deployed from the ISS in December 2025. I took over the PCB work and did the final assembly.",
+      photos: [
+        { src: "img/assembled-cubesat.jpg", title: "Assembled flight model",
+          cap: "ContentCube after final assembly, with the remove-before-flight tag." },
+        { src: "img/cubesat-selfie.jpg", title: "Payload camera image",
+          cap: "Test image from the payload camera during ground testing." }
+      ],
+      long: [
+        "I took over the PCB work on this satellite: the payload board, fixes on the battery, solar and flight controller boards, and the assembly of all the boards including the flight models. I also helped the programming team with low-level code, such as the watchdog interface and the SPI link to the antenna deployment, and I did the final assembly of the satellite in the cleanroom.",
+        "The first version of the payload board used an external daughterboard for the display, which required a large cutout in the center of the board and drew a lot of power. After going through the schematic I found that many components were not needed for our application, such as logic level converters and an inefficient LDO. I moved the remaining components onto the payload board and connected the display directly, reducing the component count and the power draw.",
+        "The satellite didn't work in orbit. Most of the board development happened the year before launch, so the programming team only got the finalized hardware weeks before the deadline, and optional features such as remote firmware updates were dropped. In the rush, the transmit power was left at the reduced testing level, causing our signals to be attenuated in the atmosphere, and without firmware updates there was no way to fix it.",
+        "Another important lesson is that external designs are not always fully tested. After the Voyager Space vibration testing, every component remained intact except a single screw on the commercial antenna, which we had avoided handling because we only had one set. The launch went ahead only because our launch provider asked NASA for an exception."
+      ]
     },
     {
       title: "Lasercom prototype",
-      img: "",
-      desc: "Laser communication link for InspireFly, with a photodiode, TIA and comparator feeding an FPGA. I work on the FPGA logic and error correction."
+      short: "Laser communication prototype for InspireFly, with live decoding and error correction on an FPGA.",
+      photos: [
+        { src: "img/lasercom-schematic.jpg", title: "Lasercom schematic",
+          cap: "TX chain, RX chain and the FPGA bus." }
+      ],
+      long: [
+        "The goal of this prototype is a laser link where the FPGA decodes the data live. The receive chain consists of a photodiode, a TIA and a comparator feeding the FPGA. Tuning the TIA is the hard part: small changes in the capacitance at the photodiode input require completely re-adjusting the feedback resistor to avoid side effects such as ringing.",
+        "Decoding on the FPGA allows live forward error correction, so burst errors are fixed on the fly and unfixable blocks can be requested again immediately. On the other hand, a receiver that saves the data and processes it afterwards may not be able to ask for the retransmission in time. The decoding chain can also be duplicated for redundancy, and the predictable latency of the FPGA allows ranging on the same link."
+      ]
     },
     {
       title: "CubeSat patch antenna",
-      img: "",
-      desc: "Polarized PCB patch antenna designed in Ansys and optimized with MATLAB on VT ARC for gain, axial ratio and S11."
+      short: "UHF patch antenna board for InspireFly's pocket cubes, designed in Ansys and optimized with MATLAB on VT ARC.",
+      photos: [],
+      long: [
+        "Patch antennas remove the mechanical risks of a deployable antenna, such as making sure it deploys fully, while keeping a circular polarization that avoids multipath. They also have no height, so they fit on an external face of the satellite. Our new UHF board costs around 100 times less than the commercial antenna we flew on ContentCube, and one side of the PCB can carry the patch while the other carries the RF front end.",
+        "I designed and simulated the polarized patches in Ansys Electronics Desktop and used the MATLAB Optimization Toolbox on the VT ARC supercomputers to optimize gain, axial ratio and S11.",
+        "I now lead the RF side of the team. Rather than telling members exactly what to do, I show them the options (single or dual feed, and what each one requires) and the tools that worked for me, so they don't hit the same dead ends I did. Some of them ended up outperforming my design."
+      ]
     },
     {
-      title: "DARPA LIFT avionics",
-      img: "",
-      desc: "CAN engine-control board, feedforward and PID throttle control, and avionics integration for a heavy-lift autonomous hexacopter."
+      title: "DARPA LIFT engine control",
+      short: "CAN engine-control board and throttle controls for a gas-powered heavy-lift hexacopter. With Prof. Kevin Kochersberger.",
+      photos: [
+        { src: "img/motor-controller.jpg", title: "Engine-control board",
+          cap: "Installed on the frame, with the actuator and sensor connectors." },
+        { src: "img/engine-board-layout.jpg", title: "Board layout",
+          cap: "PCB layout of the engine-control board." },
+        { src: "img/darpa-calibration-stand.jpg", title: "Engine test stand",
+          cap: "Used to map RPM against throttle input and to evaluate the step response." }
+      ],
+      long: [
+        "The goal of the DARPA LIFT competition was to maximize the payload to vehicle mass ratio. Hence we chose gasoline engines, since gasoline plus a combustion engine has a much higher energy density than batteries and electric motors. The issue with this approach is that each engine responds differently to the throttle.",
+        "We could either add the engine controls to the flight controller or build a separate system. I chose a separate CAN board close to the engines, which powers and reads the actuators and the hall effect RPM sensor locally, with only a power line and a CAN line going back to the avionics. This approach avoided long cable runs and allowed us to change the engine behavior without modifying the flight controller firmware, since the flight controller only sees a CAN engine.",
+        "Straight PID made the already slow engine response even slower. So we added a feedforward term that sets the throttle opening directly for the requested RPM, plus state feedback with integration to correct for disturbances such as ambient temperature. We mapped RPM against throttle input on a test stand to build the feedforward curve, and used the same stand to evaluate the step response.",
+        "The engines matched the requested RPM within 5 %, the cable mass dropped by more than half, and the drone passed the maximum mass requirement."
+      ]
     },
     {
-      title: "Aslan flight controller",
-      img: "",
-      desc: "Ported Aslan's NDAA-compliant flight controller from Betaflight to ArduCopter. Aslan tested the port and verified it works."
-    },
-    {
-      title: "Advanced soldering trainer",
-      img: "",
-      desc: "Double-sided training PCB with iron and hot-air/stencil sections, made for the AmpLab soldering training, where I have trained over 100 people."
+      title: "AmpLab soldering training",
+      short: "Lead soldering trainer at AmpLab. Over 100 students trained, plus the training boards.",
+      photos: [
+        { src: "img/soldering-board.jpg", title: "Basic Do Nothing Board",
+          cap: "Training board for the basic session, with pads, holes, through-hole and 1206 parts." }
+      ],
+      long: [
+        "I teach iron, reflow and hot-air soldering at AmpLab, and over 100 students have gone through the training, 15 of them from InspireFly.",
+        "Besides the techniques, I teach how to diagnose a board that doesn't work: what to check first (such as the fillets on QFN packages, and reflowing them if they look wrong), what to try (if a clock isn't working, inject an external one and see if the board starts), and how to fix it (cutting the ground plane and adding a flywire).",
+        "I designed the Basic Do Nothing Board for the first session, and I'm now designing an Advanced Soldering Trainer with iron and hot-air/stencil sections."
+      ]
     }
   ];
 
   var grid = document.getElementById("grid");
+  var overlay = document.getElementById("overlay");
+  var box = document.getElementById("box");
+
+  function openDetails(p) {
+    document.getElementById("box-title").textContent = p.title;
+    var ph = document.getElementById("box-photos");
+    ph.innerHTML = p.photos.map(function (f) {
+      return '<figure><img src="' + f.src + '" alt="' + f.title + '">' +
+             '<figcaption><b>' + f.title + '</b>' + f.cap + '</figcaption></figure>';
+    }).join("");
+    box.classList.toggle("nophotos", p.photos.length === 0);
+    document.getElementById("box-text").innerHTML =
+      p.long.map(function (t) { return "<p>" + t + "</p>"; }).join("");
+    ph.scrollTop = 0; document.getElementById("box-text").scrollTop = 0;
+    overlay.classList.add("show");
+    document.body.style.overflow = "hidden";
+    document.getElementById("close").focus();
+  }
+  function closeDetails() {
+    overlay.classList.remove("show");
+    document.body.style.overflow = "";
+  }
+
   projects.forEach(function (p) {
     var card = document.createElement("div");
     card.className = "card";
     card.tabIndex = 0;
-    var face = p.img
-      ? '<img src="' + p.img + '" alt="' + p.title + '" loading="lazy">'
+    var face = p.photos.length
+      ? '<img src="' + p.photos[0].src + '" alt="' + p.title + '" loading="lazy">'
       : '<div class="label">' + p.title + '</div>';
     card.innerHTML = face +
-      '<div class="info"><b>' + p.title + '</b><span>' + p.desc + '</span></div>';
-    // tap to open on phones
+      '<div class="info"><b>' + p.title + '</b><span>' + p.short + '</span>' +
+      '<button class="more-btn">More details</button></div>';
     card.addEventListener("click", function () { card.classList.toggle("open"); });
+    card.querySelector(".more-btn").addEventListener("click", function (e) {
+      e.stopPropagation();
+      openDetails(p);
+    });
     grid.appendChild(card);
   });
+
+  document.getElementById("close").addEventListener("click", closeDetails);
+  overlay.addEventListener("click", function (e) { if (e.target === overlay) closeDetails(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDetails(); });
 </script>
 </body>
 </html>
