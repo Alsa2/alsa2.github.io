@@ -34,7 +34,11 @@
     overflow: hidden;
     outline: none;
   }
-  .card > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .faces { position: absolute; inset: 0; display: grid; gap: 2px; background: #222; }
+  .faces img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 0; }
+  .faces.n2 { grid-template-columns: 1fr 1fr; }
+  .faces.n3 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; }
+  .faces.n3 img:first-child { grid-row: 1 / 3; }
   .card .label {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -162,7 +166,7 @@
       long: [
         "The goal of this project is a four-element phased-array GPS receiver, with the whole signal chain running on an FPGA. A phased array increases the signal-to-noise ratio, and by beamforming each satellite channel towards the actual satellite heading it can also remove jammers and spoofers. On the FPGA this beamforming is almost free resource wise, and it can be parallelized for each channel.",
         "I designed the RF board around four MAX2769B chips, which contain the LNA, mixers and ADCs, and added a SAW filter between the LNA and the mixer to remove WiFi and cellular noise. The board uses a stackup with 50 Ω traces. I first tried to integrate the patch antennas directly onto the PCB, but due to the thin dielectric they ended up huge, with an axial ratio of 10 dB rather than the 3 dB required for a circularly polarized antenna, so I switched to four ceramic patches. A single 16.368 MHz clock goes through a 1-to-4 buffer to all four MAX2769B, with matched trace lengths so all the channels sample at the same time, hopefully removing the need to calibrate the array. The gains of the four chips are set over SPI, since all four elements need matching gains for the beamforming to work.",
-        "The algorithms from class could not be copied onto the FPGA, they had to be designed almost from scratch. In MATLAB, removing the Doppler was just a multiplication with a complex exponential, while on the FPGA I had to design a numerically controlled oscillator that is accelerated and decelerated by the tracking loops. Sampling at four times the intermediate frequency leaves only four possible carrier phases, so removing the carrier becomes a swap and sign change of I and Q instead of a multiplication, saving a lot of DSPs. Every variable also had to be sized: I shrank the accumulators to 25 bits to fit the DSP48E1 multiplier, and chose the bit shifts with testbenches on real data to get the best compromise between precision and overflow. Dividing by the accumulation power is done with a Newton-Raphson reciprocal followed by a multiplication.",
+        "The algorithms from class could not be copied onto the FPGA, they had to be designed almost from scratch. In MATLAB, removing the Doppler was just a multiplication with a complex exponential, while on the FPGA I had to design a numerically controlled oscillator driven by the tracking loops. Every variable also had to be sized to fit the DSP slices, so I used testbenches on real data to find the best compromise between precision and overflow.",
         "The front end samples 2-bit IQ at 16.368 MHz, while the processing is pipelined to run at 100 MHz. Acquisition and tracking are modules that can be instantiated as needed, with each tracking loop using about 1500 of the 17600 LUTs on the Zynq-7000, so up to 11 trackers fit on this chip. The Doppler range can also be widened past the usual 10 kHz for spacecraft trajectories. We tested the receiver with a HackRF and then with a Spirent GSS9000 simulator, measuring a C/N0 of 49.4 dB-Hz.",
         "So far acquisition, tracking and the pseudorange and ephemeris extraction work. I'm currently working on the position solution and on per-channel beamforming, so each tracker only listens to its own satellite."
       ]
@@ -173,8 +177,8 @@
       photos: [
         { src: "img/assembled-cubesat.jpg", title: "Assembled flight model",
           cap: "ContentCube after final assembly, with the remove-before-flight tag." },
-        { src: "img/cubesat-selfie.jpg", title: "Payload camera image",
-          cap: "Test image from the payload camera during ground testing." }
+        { src: "img/cubesat-selfie.jpg", title: "Selfie from the ContentCube camera",
+          cap: "Taken by the payload camera during ground testing." }
       ],
       long: [
         "I took over the PCB work on this satellite: the payload board, fixes on the battery, solar and flight controller boards, and the assembly of all the boards including the flight models. I also helped the programming team with low-level code, such as the watchdog interface and the SPI link to the antenna deployment, and I did the final assembly of the satellite in the cleanroom.",
@@ -192,17 +196,21 @@
       ],
       long: [
         "The goal of this prototype is a laser link where the FPGA decodes the data live. The receive chain consists of a photodiode, a TIA and a comparator feeding the FPGA. Tuning the TIA is the hard part: small changes in the capacitance at the photodiode input require completely re-adjusting the feedback resistor to avoid side effects such as ringing.",
-        "Decoding on the FPGA allows live forward error correction, so burst errors are fixed on the fly and unfixable blocks can be requested again immediately. On the other hand, a receiver that saves the data and processes it afterwards may not be able to ask for the retransmission in time. The decoding chain can also be duplicated for redundancy, and the predictable latency of the FPGA allows ranging on the same link."
+        "Decoding on the FPGA allows live forward error correction, so burst errors are fixed on the fly and unfixable blocks can be requested again immediately. On the other hand, a receiver that saves the data and processes it afterwards may not be able to ask for the retransmission in time. The decoding chain can also be duplicated for redundancy, and the predictable latency of the FPGA allows ranging on the same link.",
+        "I'm now implementing a time-to-digital converter in the FPGA carry chain, so the ranging doesn't rely on an external TDC chip."
       ]
     },
     {
       title: "CubeSat patch antenna",
       short: "UHF patch antenna board for InspireFly's pocket cubes, designed in Ansys and optimized with MATLAB on VT ARC.",
-      photos: [],
+      photos: [
+        { src: "img/old-patch-antennas.jpg", title: "Reference: GPS receiver patches",
+          cap: "The PCB patches on my GPS receiver were based on this circularly polarized InspireFly design." }
+      ],
       long: [
         "Patch antennas remove the mechanical risks of a deployable antenna, such as making sure it deploys fully, while keeping a circular polarization that avoids multipath. They also have no height, so they fit on an external face of the satellite. Our new UHF board costs around 100 times less than the commercial antenna we flew on ContentCube, and one side of the PCB can carry the patch while the other carries the RF front end.",
         "I designed and simulated the polarized patches in Ansys Electronics Desktop and used the MATLAB Optimization Toolbox on the VT ARC supercomputers to optimize gain, axial ratio and S11.",
-        "I now lead the RF side of the team. Rather than telling members exactly what to do, I show them the options (single or dual feed, and what each one requires) and the tools that worked for me, so they don't hit the same dead ends I did. Some of them ended up outperforming my design."
+        "I now advise newer members on the RF side of the team. Rather than telling them exactly what to do, I show them the options (single or dual feed, and what each one requires) and the tools that worked for me, so they don't hit the same dead ends I did. Some of them ended up outperforming my design."
       ]
     },
     {
@@ -225,15 +233,23 @@
     },
     {
       title: "AmpLab soldering training",
-      short: "Lead soldering trainer at AmpLab. Over 100 students trained, plus the training boards.",
+      short: "Soldering trainer at AmpLab, with over 100 students trained so far.",
       photos: [
         { src: "img/soldering-board.jpg", title: "Basic Do Nothing Board",
-          cap: "Training board for the basic session, with pads, holes, through-hole and 1206 parts." }
+          cap: "The board I designed for the basic soldering session." }
       ],
       long: [
-        "I teach iron, reflow and hot-air soldering at AmpLab, and over 100 students have gone through the training, 15 of them from InspireFly.",
-        "Besides the techniques, I teach how to diagnose a board that doesn't work: what to check first (such as the fillets on QFN packages, and reflowing them if they look wrong), what to try (if a clock isn't working, inject an external one and see if the board starts), and how to fix it (cutting the ground plane and adding a flywire).",
-        "I designed the Basic Do Nothing Board for the first session, and I'm now designing an Advanced Soldering Trainer with iron and hot-air/stencil sections."
+        "I teach soldering at AmpLab, and over 100 students have gone through the training so far."
+      ]
+    },
+    {
+      title: "Sailing",
+      short: "Me sailing.",
+      photos: [
+        { src: "img/sailing.jpg", title: "Me sailing", cap: "" }
+      ],
+      long: [
+        "I like sailing."
       ]
     }
   ];
@@ -267,7 +283,10 @@
     card.className = "card";
     card.tabIndex = 0;
     var face = p.photos.length
-      ? '<img src="' + p.photos[0].src + '" alt="' + p.title + '" loading="lazy">'
+      ? '<div class="faces n' + Math.min(p.photos.length, 3) + '">' +
+        p.photos.slice(0, 3).map(function (f) {
+          return '<img src="' + f.src + '" alt="' + f.title + '" loading="lazy">';
+        }).join("") + '</div>'
       : '<div class="label">' + p.title + '</div>';
     card.innerHTML = face +
       '<div class="info"><b>' + p.title + '</b><span>' + p.short + '</span>' +
